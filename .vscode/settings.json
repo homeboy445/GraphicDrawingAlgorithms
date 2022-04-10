@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "*.ejs": "html",
+        "*.txt": "git-commit",
+        "chrono": "cpp",
+        "cmath": "cpp"
+    },
+    "cSpell.words": [
+        "Sqrd"
+    ]
+}
