@@ -98,11 +98,19 @@ public:
     this->Draw();
   }
   void BresenhamCircleDrawingAlgo(int Radius, pair<int, int> center = {0, 0}) {
-    int xx = center.x, yy = Radius + center.x;
+    int xx = 0, yy = Radius;
     int P = 3 - (2 * Radius);
     vector<pair<int, int>> coords;
     while (xx <= yy) {
-      coords.push_back({xx++, yy});
+      coords.push_back({center.x + xx, center.y + yy});
+      coords.push_back({center.x + xx, center.y - yy});
+      coords.push_back({center.x - xx, center.y + yy});
+      coords.push_back({center.x - xx, center.y - yy});
+      coords.push_back({center.x + yy, center.y + xx});
+      coords.push_back({center.x + yy, center.y - xx});
+      coords.push_back({center.x - yy, center.y + xx});
+      coords.push_back({center.x - yy, center.y - xx});
+      ++xx;
       if (P <= 0) {
         P = (4 * xx) + 6;
       } else {
@@ -110,13 +118,6 @@ public:
         P = (4 * (xx - yy)) + 10;
       }
     }
-    for (int i = 0, n = coords.size(); i < n; i++) {
-      coords.push_back({coords[i].y, coords[i].x});
-    }
-    const int SIZE = coords.size();
-    getCoordinatesForQuadrant(coords, Quadrant::II, SIZE);
-    getCoordinatesForQuadrant(coords, Quadrant::III, SIZE);
-    getCoordinatesForQuadrant(coords, Quadrant::IV, SIZE);
     this->paint(coords);
   }
   void MidPointCircleDrawingAlgo(int const Radius,
@@ -154,7 +155,12 @@ public:
     int tRx = 2 * Rx2, tRy = 2 * Ry2;
     int dx = 0, dy = tRx * yy, P = (Ry2 - (Rx2 - ry) + (0.25 * Rx2));
     vector<pair<int, int>> coords;
+    // First Region
     while (dx < dy) {
+      coords.push_back({center.x + xx, center.y + yy});
+      coords.push_back({center.x + xx, center.y - yy});
+      coords.push_back({center.x - xx, center.y + yy});
+      coords.push_back({center.x - xx, center.y - yy});
       xx++;
       dx += tRy;
       if (P < 0) {
@@ -164,14 +170,14 @@ public:
         dy -= tRx;
         P += Ry2 + (dx - dy);
       }
-      coords.push_back({center.x + xx, center.y + yy});
-      coords.push_back({center.x + xx, center.y - yy});
-      coords.push_back({center.x - xx, center.y + yy});
-      coords.push_back({center.x - xx, center.y - yy});
     }
     // Second Region
     P = (Ry2 * (xx + 0.5) * (xx + 0.5)) + Rx2 * (yy - 1) * (yy - 1) - Rx2 * Ry2;
     while (yy > 0) {
+      coords.push_back({center.x + xx, center.y + yy});
+      coords.push_back({center.x + xx, center.y - yy});
+      coords.push_back({center.x - xx, center.y + yy});
+      coords.push_back({center.x - xx, center.y - yy});
       --yy;
       dy -= tRx;
       if (P > 0) {
@@ -181,10 +187,6 @@ public:
         dx += tRy;
         P += Rx2 - dy + dx;
       }
-      coords.push_back({center.x + xx, center.y + yy});
-      coords.push_back({center.x + xx, center.y - yy});
-      coords.push_back({center.x - xx, center.y + yy});
-      coords.push_back({center.x - xx, center.y - yy});
     }
     this->paint(coords);
   }
@@ -200,7 +202,6 @@ public:
   }
   /**
    * @brief Prints the whole matrix.
-   *
    */
   void Draw() override {
     this->clearScreen();
@@ -248,6 +249,7 @@ int main() {
     mx -= 2;
     s.delay();
   } */
-  s.EllipseDrawAlgo(3, 6, {10, 10});
+  // s.BresenhamCircleDrawingAlgo(8, {10, 10});
+  s.EllipseDrawAlgo(8, 6, {10, 10});
   return cout << "\n", 0;
 }
