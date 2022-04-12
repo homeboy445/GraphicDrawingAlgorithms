@@ -51,16 +51,30 @@ class GraphicsPrimitives {
     floodFill({point.x - 1, point.y + 1}, coordinates);
     floodFill({point.x - 1, point.y - 1}, coordinates);
   }
+  struct CircleUtil {
+    static void PlotCircle(vector<pair<int, int>> &coords,
+                           pair<int, int> const &center, int const &xx,
+                           int const &yy) {
+      coords.push_back({center.x + xx, center.y + yy});
+      coords.push_back({center.x + xx, center.y - yy});
+      coords.push_back({center.x - xx, center.y + yy});
+      coords.push_back({center.x - xx, center.y - yy});
+      coords.push_back({center.x + yy, center.y + xx});
+      coords.push_back({center.x + yy, center.y - xx});
+      coords.push_back({center.x - yy, center.y + xx});
+      coords.push_back({center.x - yy, center.y - xx});
+    }
+  };
 
 public:
   GraphicsPrimitives() {}
   GraphicsPrimitives(int x, int y) { screen.resize(x, vector<int>(y, 0)); }
-  vector<vector<int>> &getScreen() { return screen; }
 
 protected:
   virtual void Draw() = 0;
   virtual void paint(vector<pair<int, int>> const &coordinates,
                      bool animate = false) = 0;
+  vector<vector<int>> &getScreen() { return screen; }
   void DDALineAlgo(pair<int, int> p1, pair<int, int> p2) {
     if (p1.x < 0 || p1.x >= this->screen.size() || p2.x < 0 ||
         p2.x >= this->screen.back().size()) {
@@ -82,22 +96,34 @@ protected:
     }
     this->Draw();
   }
-  void BresenhamLineDrawingAlgo(pair<int, int> p1, pair<int, int> p2) {
-    if (p1.x < 0 || p1.x >= this->screen.size() || p2.x < 0 ||
-        p2.x >= this->screen.back().size()) {
+  void BresenhamLineDrawingAlgo(
+      pair<int, int> p1,
+      pair<int, int> p2) { // FIXME: It's showing faulty behaviour!
+    auto invalid = [&](pair<int, int> a) -> bool {
+      return a.x < 0 || a.x >= this->screen.size();
+    };
+    if (invalid(p1) || invalid(p2)) { // Change this in case you the change the
+                                      // resolution to be unequal;
       return;
     }
     int dx = p2.x - p1.x, dy = p2.y - p1.y;
-    int steps = max(dy, dx);
+    int steps = max(abs(dy), abs(dx));
+    if ((steps == abs(dy) && p1.y > p2.y) ||
+        (steps == abs(dx) && p1.x > p2.x)) {
+      swap(p1, p2);
+    }
     int P = 2 * dy + dx;
     int xx = p1.x, yy = p1.y;
-    while (xx <= p2.x) {
-      this->screen[xx++][yy] = 1;
+    while (steps--) {
+      if (!invalid({xx, yy})) {
+        this->screen[xx][yy] = 1;
+      }
       if (P < 0) {
         P += 2 * dy;
       } else {
         P += 2 * (dy - dx), ++yy;
       }
+      xx = xx >= p2.x ? xx : ++xx;
     }
     this->Draw();
   }
@@ -106,14 +132,7 @@ protected:
     int P = 3 - (2 * Radius);
     vector<pair<int, int>> coords;
     while (xx <= yy) {
-      coords.push_back({center.x + xx, center.y + yy});
-      coords.push_back({center.x + xx, center.y - yy});
-      coords.push_back({center.x - xx, center.y + yy});
-      coords.push_back({center.x - xx, center.y - yy});
-      coords.push_back({center.x + yy, center.y + xx});
-      coords.push_back({center.x + yy, center.y - xx});
-      coords.push_back({center.x - yy, center.y + xx});
-      coords.push_back({center.x - yy, center.y - xx});
+      CircleUtil::PlotCircle(coords, center, xx, yy);
       ++xx;
       if (P <= 0) {
         P = (4 * xx) + 6;
@@ -130,23 +149,13 @@ protected:
     int P = 1 - Radius;
     vector<pair<int, int>> coords;
     while (xx <= yy) {
-      coords.push_back({center.x + xx, center.y + yy});
-      coords.push_back({center.x + xx, center.y - yy});
-      coords.push_back({center.x - xx, center.y + yy});
-      coords.push_back({center.x - xx, center.y - yy});
-      coords.push_back({center.x + yy, center.y + xx});
-      coords.push_back({center.x + yy, center.y - xx});
-      coords.push_back({center.x - yy, center.y + xx});
-      coords.push_back({center.x - yy, center.y - xx});
+      CircleUtil::PlotCircle(coords, center, xx, yy);
       if (P < 0) {
         P += (2 * xx) + 3;
       } else {
         P += 2 * (xx - yy) + 5, --yy;
       }
       ++xx;
-    }
-    for (int i = 0, n = coords.size(); i < n; i++) {
-      coords.push_back({coords[i].y, coords[i].x});
     }
     this->paint(coords);
   }
@@ -208,6 +217,12 @@ public:
       DDALineAlgo(coordinates[i], coordinates[i + 1]);
     }
   }
+  void DrawCircle(int Radius, pair<int, int> center) {
+    if (Radius >= getScreen().size() - 1) {
+      return;
+    }
+    MidPointCircleDrawingAlgo(Radius, center);
+  }
 };
 
 class Screen : public Graphics {
@@ -221,6 +236,16 @@ class Screen : public Graphics {
   }
   void delay(int time = 1) {
     for (int i = 1; i <= (1e9); i += max(time, 1)) {
+    }
+  }
+  void PlayAnimation() {
+    int frames = 100, mx = 15;
+    while (frames-- > 0) { // ANIMATION TIME!
+      if (mx <= 0)
+        break;
+      MidPointCircleDrawingAlgo((mx / 2) + 1, {mx, mx});
+      mx -= 2;
+      delay();
     }
   }
 
@@ -271,16 +296,7 @@ public:
   }
 };
 int main() {
-  Screen s(20, 20); // Make sure to pass the coordinates like this -> (smaller
-                    // coordinate, larger coordinate) for line drawing algo;
-  /* int frames = 100, mx = 15;
-  while (frames-- > 0) { // ANIMATION TIME!
-    if (mx <= 0)
-      break;
-    s.MidPointCircleDrawingAlgo((mx / 2) + 1, {mx, mx});
-    mx -= 2;
-    s.delay();
-  } */
-  s.DrawPolygon({{2, 2}, {2, 10}, {10, 10}, {10, 2}});
+  Screen s(20, 20);
+  s.DrawPolygon({{1, 1}, {1, 18}, {18, 9}});
   return cout << "\n", 0;
 }
