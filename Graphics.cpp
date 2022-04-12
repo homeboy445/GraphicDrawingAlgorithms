@@ -1,34 +1,12 @@
 #include <cmath>
 #include <iostream>
+#include <map>
+#include <queue>
+#include <unordered_map>
 #include <vector>
 #define x first
 #define y second
 using namespace std;
-class CircleUtil {
-public:
-  enum class Quadrant { I, II, III, IV };
-  void getCoordinatesForQuadrant(vector<pair<int, int>> &coords, Quadrant quad,
-                                 int const &SIZE) {
-    int xMul = 1, yMul = 1;
-    switch (quad) {
-    case Quadrant::I:
-      break;
-    case Quadrant::II:
-      xMul = -1;
-      break;
-    case Quadrant::III:
-      yMul = -1;
-      break;
-    case Quadrant::IV:
-      xMul = -1, yMul = -1;
-      break;
-    }
-    for (int i = 0; i < SIZE; i++) {
-      coords.push_back({coords[i].x * xMul, coords[i].y * yMul});
-    }
-  }
-};
-
 /**
  * This class contains implementation for some graphic primitives(like line,
  * circle, ellipse, etc) drawing algorithms. This class doesn't use any external
@@ -37,37 +15,63 @@ public:
  * '0' the color would be white, and if it's '1' the color would be red. NOTE:
  * This class is intended for educational & demonstration purposes only.
  */
-class Graphics : public CircleUtil {
-  pair<int, int> size;
+class GraphicsPrimitives {
   vector<vector<int>> screen;
-  void floodFill(pair<int, int> point) {
-    if (point.x < 0 || point.x >= size.x || point.y < 0 || point.y >= size.y) {
+  unordered_map<string, int> COLORS = {
+      {"WHITE", 0},
+      {"RED", 1},
+      {"BLUE", 2},
+      {"GREEN", 3},
+  };
+  void fixedDelay() {
+    for (int i(0); i < 1e6; i++) {
+    }
+  }
+  void floodFill(pair<int, int> point, vector<pair<int, int>> &coordinates) {
+    if (point.x < 0 || point.x >= this->screen.size() || point.y < 0 ||
+        point.y >= this->screen.back().size()) {
       return;
     }
-    this->screen[point.x][point.y] = 1;
-    floodFill({point.x, point.y + 1});
-    floodFill({point.x, point.y - 1});
-    floodFill({point.x + 1, point.y});
-    floodFill({point.x - 1, point.y});
+    coordinates.push_back(
+        {point.x, point.y}); // TODO: IT's not working properly!
+    if (this->screen[point.x][point.y] == 1) {
+      return;
+    }
+    this->screen[point.x][point.y] = 1; // Using screen matrix as a cache;
+
+    // Side-wise
+    floodFill({point.x, point.y + 1}, coordinates);
+    floodFill({point.x, point.y - 1}, coordinates);
+    floodFill({point.x + 1, point.y}, coordinates);
+    floodFill({point.x - 1, point.y}, coordinates);
+
+    // Diagonally
+    floodFill({point.x + 1, point.y + 1}, coordinates);
+    floodFill({point.x + 1, point.y - 1}, coordinates);
+    floodFill({point.x - 1, point.y + 1}, coordinates);
+    floodFill({point.x - 1, point.y - 1}, coordinates);
   }
 
 public:
-  Graphics() {}
-  Graphics(int x, int y) {
-    size = {x, y};
-    screen.resize(x, vector<int>(y, 0));
-  }
+  GraphicsPrimitives() {}
+  GraphicsPrimitives(int x, int y) { screen.resize(x, vector<int>(y, 0)); }
   vector<vector<int>> &getScreen() { return screen; }
+
+protected:
   virtual void Draw() = 0;
-  virtual void paint(vector<pair<int, int>> const &coordinates) = 0;
+  virtual void paint(vector<pair<int, int>> const &coordinates,
+                     bool animate = false) = 0;
   void DDALineAlgo(pair<int, int> p1, pair<int, int> p2) {
     if (p1.x < 0 || p1.x >= this->screen.size() || p2.x < 0 ||
         p2.x >= this->screen.back().size()) {
       cout << "Invalid coordinates!\n";
       return;
     }
+    if (p1.x > p2.x) {
+      swap(p1, p2);
+    }
     int dx = p2.x - p1.x, dy = p2.y - p1.y;
-    int steps = max(dy, dx);
+    int steps = max(abs(dy), abs(dx));
     double xInc = double(dx) / double(steps);
     double yInc = double(dy) / double(steps);
     double xx = p1.x, yy = p1.y;
@@ -147,7 +151,8 @@ public:
     this->paint(coords);
   }
   void FloodFillAlgo(pair<int, int> start, bool animate = false) {
-    floodFill(start);
+    vector<pair<int, int>> coordinates;
+    queue<pair<int, int>> que;
   }
   void EllipseDrawAlgo(int rx, int ry, pair<int, int> center = {0, 0}) {
     int xx = 0, yy = ry;
@@ -188,16 +193,41 @@ public:
         P += Rx2 - dy + dx;
       }
     }
-    this->paint(coords);
+    this->paint(coords, true);
+  }
+};
+
+class Graphics : public GraphicsPrimitives {
+public:
+  void DrawPolygon(vector<pair<int, int>> coordinates) {
+    if (coordinates.size() < 2 || coordinates.size() > 10) {
+      return;
+    }
+    DDALineAlgo(coordinates.front(), coordinates.back());
+    for (int i = 0; i < coordinates.size() - 1; ++i) {
+      DDALineAlgo(coordinates[i], coordinates[i + 1]);
+    }
   }
 };
 
 class Screen : public Graphics {
+  pair<int, int> size;
   void clearScreen() { cout << "\033[2J\033[1;1H"; }
+  void resizeScreen() { getScreen().resize(size.x, vector<int>(size.y)); }
+  void refresh() {
+    getScreen().clear();
+    this->resizeScreen();
+    this->Draw();
+  }
+  void delay(int time = 1) {
+    for (int i = 1; i <= (1e9); i += max(time, 1)) {
+    }
+  }
 
 public:
   Screen(int x, int y) {
-    getScreen().resize(x, vector<int>(y));
+    size = {x, y};
+    this->resizeScreen();
     this->Draw();
   }
   /**
@@ -222,20 +252,22 @@ public:
    *
    * @param coordinates
    */
-  void paint(vector<pair<int, int>> const &coordinates) override {
+  void paint(vector<pair<int, int>> const &coordinates,
+             bool animate = false) override {
+    this->refresh();
     for (auto &coord : coordinates) {
       if (coord.x < 0 || coord.x >= getScreen().size() || coord.y < 0 ||
           coord.y >= getScreen().back().size()) {
         continue;
       }
       getScreen()[coord.x][coord.y] = 1;
+      if (animate) {
+        this->Draw();
+        this->delay(100);
+      }
     }
-    this->Draw();
-  }
-  void refresh() { getScreen().clear(), this->Draw(); }
-  void delay(int time = 1) {
-    for (int i = 1; i <= (1e9 / time); i++) {
-    }
+    if (!animate)
+      this->Draw();
   }
 };
 int main() {
@@ -249,7 +281,6 @@ int main() {
     mx -= 2;
     s.delay();
   } */
-  // s.BresenhamCircleDrawingAlgo(8, {10, 10});
-  s.EllipseDrawAlgo(8, 6, {10, 10});
+  s.DrawPolygon({{2, 2}, {2, 10}, {10, 10}, {10, 2}});
   return cout << "\n", 0;
 }
